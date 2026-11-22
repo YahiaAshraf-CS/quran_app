@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:quran_app/core/constants/app_assets.dart';
 import 'package:quran_app/core/themes/app_color.dart';
+import 'package:quran_app/features/sura/presentation/view/player_screen.dart';
+import 'package:quran_app/features/sura/presentation/view_model/player_cubit.dart';
 import 'package:quran_app/features/suwar/data/models/get_suwar_model.dart';
 import 'package:quran_app/features/suwar/presentation/view_model/get_suwar_cubit.dart';
 import 'package:quran_app/features/suwar/presentation/view_model/get_suwar_state.dart';
@@ -16,12 +18,6 @@ class GetSuwarScreen extends StatefulWidget {
 }
 
 class _GetSuwarScreenState extends State<GetSuwarScreen> {
-  String _buildAudioUrl(String server, int surahId) {
-    final cleanServer = server.endsWith('/') ? server : '$server/';
-    final paddedId = surahId.toString().padLeft(3, '0');
-    return '$cleanServer$paddedId.mp3';
-  }
-
   String? _extractSurahList() {
     try {
       if (widget.selectedMoshaf != null &&
@@ -75,7 +71,7 @@ class _GetSuwarScreenState extends State<GetSuwarScreen> {
               return Column(
                 children: [
                   _SuwarHeader(subtitle: _extractSubtitle()),
-                  Expanded(
+                  const Expanded(
                     child: Center(
                       child: CircularProgressIndicator(
                         color: AppColors.primary,
@@ -110,7 +106,7 @@ class _GetSuwarScreenState extends State<GetSuwarScreen> {
                   _SuwarHeader(subtitle: _extractSubtitle()),
                   Expanded(
                     child: state.suwarList.isEmpty
-                        ? Center(
+                        ? const Center(
                             child: Text(
                               'لا توجد سور متاحة',
                               style: TextStyle(
@@ -130,20 +126,28 @@ class _GetSuwarScreenState extends State<GetSuwarScreen> {
                                 surah: surah,
                                 onTap: () {
                                   final server = _extractServer();
-                                  final surahId = surah.id ?? (index + 1);
-                                  final audioUrl = server != null
-                                      ? _buildAudioUrl(server, surahId)
-                                      : null;
-
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        audioUrl != null
-                                            ? 'سورة ${surah.name ?? ''} - جاهز للتشغيل'
-                                            : 'تم اختيار سورة ${surah.name ?? ''}',
+                                  if (server == null || server.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'رابط السيرفر غير متاح لهذه التلاوة',
+                                        ),
+                                        backgroundColor: AppColors.primaryDark,
                                       ),
-                                      duration: const Duration(
-                                        milliseconds: 900,
+                                    );
+                                    return;
+                                  }
+
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => BlocProvider<PlayerCubit>(
+                                        create: (_) => PlayerCubit(
+                                          server: server,
+                                          suwarList: state.suwarList,
+                                          initialIndex: index,
+                                        ),
+                                        child: const PlayerScreen(),
                                       ),
                                     ),
                                   );
@@ -163,6 +167,7 @@ class _GetSuwarScreenState extends State<GetSuwarScreen> {
     );
   }
 }
+
 class _SuwarHeader extends StatelessWidget {
   final String subtitle;
 
@@ -170,75 +175,62 @@ class _SuwarHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final topPadding = MediaQuery.of(context).padding.top;
-
-    return Stack(
-      children: [
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.only(
-            top: topPadding + 18,
-            bottom: 28,
-            left: 20,
-            right: 20,
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: const BorderRadius.vertical(
-              bottom: Radius.elliptical(240, 65),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 10,
+        bottom: 28,
+        left: 16,
+        right: 16,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.vertical(bottom: Radius.elliptical(240, 65)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Image.asset(
-                AppAssets.quranImage,
-                height: 120,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'عبد الباسط عبد الصمد',
-                textAlign: TextAlign.center,
-                style: TextStyle(
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(
+                  Icons.arrow_forward_ios_rounded,
                   color: AppColors.textOnPrimary,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
                 ),
+                tooltip: 'اختيار التلاوة',
               ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.textOnPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+              const SizedBox(width: 48),
             ],
           ),
-        ),
-
-        // زرار الرجوع
-        PositionedDirectional(
-          top: topPadding + 8,
-          start: 12,
-          child: Material(
-            color: Colors.white.withValues(alpha: 0.2),
-            shape: const CircleBorder(),
-            child: IconButton(
-              tooltip: 'رجوع',
-              icon: const Icon(Icons.arrow_back_rounded),
+          Image.asset(AppAssets.quranImage, height: 92, fit: BoxFit.contain),
+          const SizedBox(height: 10),
+          const Text(
+            'عبد الباسط عبد الصمد',
+            textAlign: TextAlign.center,
+            style: TextStyle(
               color: AppColors.textOnPrimary,
-              onPressed: () => Navigator.of(context).maybePop(),
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.textOnPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
+
 class _SurahCard extends StatelessWidget {
   final Suwar surah;
   final VoidCallback onTap;
@@ -273,13 +265,13 @@ class _SurahCard extends StatelessWidget {
               width: 44,
               height: 44,
               alignment: Alignment.center,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.primaryLight,
                 shape: BoxShape.circle,
               ),
               child: Text(
                 '$surahNumber',
-                style: TextStyle(
+                style: const TextStyle(
                   color: AppColors.primary,
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
@@ -293,7 +285,7 @@ class _SurahCard extends StatelessWidget {
                 children: [
                   Text(
                     surah.name ?? '',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -302,7 +294,7 @@ class _SurahCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     '$placeType - Sura $surahNumber',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 14,
                     ),
@@ -310,7 +302,7 @@ class _SurahCard extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(
+            const Icon(
               Icons.chevron_right_rounded,
               color: AppColors.textSecondary,
               size: 24,
@@ -336,7 +328,7 @@ class _SuwarErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            const Icon(
               Icons.error_outline_rounded,
               size: 46,
               color: AppColors.primary,
@@ -345,7 +337,10 @@ class _SuwarErrorView extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 15,
+              ),
             ),
             const SizedBox(height: 18),
             ElevatedButton(

@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:quran_app/core/routes/app_routes.dart';
 import 'package:quran_app/features/home/presentation/view/get_telawa_screen.dart';
 import 'package:quran_app/features/home/presentation/view_model/get_telawa_cubit.dart';
+import 'package:quran_app/features/splash_screen/splash_screen.dart';
+import 'package:quran_app/features/sura/presentation/view/player_screen.dart';
 import 'package:quran_app/features/suwar/presentation/view/get_suwar_screen.dart';
 import 'package:quran_app/features/suwar/presentation/view_model/get_suwar_cubit.dart';
 
@@ -26,9 +28,11 @@ class QuranApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'Quran App',
         theme: ThemeData(primarySwatch: Colors.blue),
-        initialRoute: AppRoutes.getTelawa,
+        initialRoute: AppRoutes.splash,
         routes: {
+          AppRoutes.splash: (context) => const SplashScreen(),
           AppRoutes.getTelawa: (context) => const GetTelawaScreen(),
+          AppRoutes.getSura:(context) => const PlayerScreen(),
           AppRoutes.getSuwar: (context) {
             final args = ModalRoute.of(context)?.settings.arguments;
             return GetSuwarScreen(selectedMoshaf: args);
